@@ -56,7 +56,7 @@ export default function HomePage() {
           <p className="font-signature text-eyebrow uppercase text-accent">
             Nouvelle collection
           </p>
-          <h1 className="mt-4 max-w-2xl font-display text-display-lg uppercase leading-[0.95] tracking-wide text-foreground sm:text-display-xl">
+          <h1 className="mt-4 max-w-3xl font-display text-display-lg uppercase leading-[0.95] tracking-wide text-foreground sm:text-display-xl">
             Le streetwear qui coule dans les rues,{" "}
             <span className="text-accent">pas en rayon.</span>
           </h1>
