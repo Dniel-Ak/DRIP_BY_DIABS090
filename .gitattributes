@@ -1,0 +1,15 @@
+# Normalise les fins de ligne : tous les fichiers texte sont stockés en LF
+# dans le dépôt (peu importe l'OS utilisé pour les éditer), pour éviter
+# que Windows (qui utilise CRLF) ne les fasse apparaître comme "modifiés"
+# à chaque sauvegarde alors que le contenu réel n'a pas changé.
+* text=auto eol=lf
+
+# Fichiers binaires : jamais de conversion de fin de ligne (ça les
+# corromprait) — Git les laisse déjà tranquilles avec `text=auto`, mais on
+# le précise explicitement pour éviter toute mauvaise détection.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff2 binary
+*.gif binary
