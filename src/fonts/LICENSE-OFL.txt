@@ -1,0 +1,9 @@
+Ces deux polices (Bebas Neue et Cinzel) sont sous licence SIL Open Font
+License 1.1, qui autorise l'usage, la modification et la redistribution
+(y compris en les auto-hébergeant comme ici) — texte complet :
+http://scripts.sil.org/OFL
+
+Bebas Neue : Copyright 2019 The Bebas Neue Project Authors
+  (https://github.com/dharmatype/Bebas-Neue)
+Cinzel     : Copyright 2020 The Cinzel Project Authors
+  (https://github.com/NDISCOVER/Cinzel)
