@@ -1,3 +1,7 @@
+import { hasLocale } from "next-intl";
+
+import { getPathname } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import { getProductBySlug } from "@/lib/products";
 import { initializePaystackTransaction } from "@/lib/paystack";
 import { releaseReservation, reserveStock } from "@/lib/stock";
@@ -12,6 +16,17 @@ interface CheckoutLine {
 interface CheckoutRequestBody {
   email?: string;
   lines?: CheckoutLine[];
+  /**
+   * Langue depuis laquelle la commande est passée ("fr" | "en"). Sert
+   * UNIQUEMENT à renvoyer le client sur la page de confirmation de la bonne
+   * version du site après le paiement Paystack. Optionnel : une valeur
+   * absente ou inconnue retombe sur le français.
+   *
+   * Les messages d'erreur de cette route restent en français dans tous les
+   * cas (lus par l'équipe et affichés tels quels côté panier) — la
+   * localisation des réponses d'API est hors périmètre.
+   */
+  locale?: string;
 }
 
 /**
@@ -100,11 +115,22 @@ export async function POST(request: Request) {
   const reference = `diabs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const origin = new URL(request.url).origin;
 
+  // Chemin de retour après paiement, dans la langue d'où vient la commande :
+  // "/paiement/confirmation" en français, "/en/paiement/confirmation" en
+  // anglais. Calculé par next-intl (pas de préfixe concaténé à la main).
+  const locale = hasLocale(routing.locales, body.locale)
+    ? body.locale
+    : routing.defaultLocale;
+  const confirmationPath = getPathname({
+    href: "/paiement/confirmation",
+    locale,
+  });
+
   // On réserve (décrémente) le stock dès le démarrage du paiement, avant
   // même d'appeler Paystack : ça évite qu'un autre client achète le dernier
   // article pendant que celui-ci est en train de payer. Si le paiement
   // échoue/est abandonné, le stock est remis à son niveau initial depuis
-  // /paiement/confirmation (voir src/lib/stock.ts).
+  // la page de confirmation de paiement (voir src/lib/stock.ts).
   const reservation = await reserveStock(
     reference,
     orderItems.map((item) => ({
@@ -133,7 +159,7 @@ export async function POST(request: Request) {
       email,
       amountXOF: total,
       reference,
-      callbackUrl: `${origin}/paiement/confirmation?reference=${reference}`,
+      callbackUrl: `${origin}${confirmationPath}?reference=${reference}`,
       metadata: { items: orderItems },
     });
 

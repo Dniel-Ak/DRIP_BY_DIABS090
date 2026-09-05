@@ -1,22 +1,45 @@
 import { ImageResponse } from "next/og";
+import { getTranslations } from "next-intl/server";
 
+import { routing } from "@/i18n/routing";
 import { SITE_NAME } from "@/lib/site";
 
 export const alt = SITE_NAME;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+/** Pré-génère l'image au build pour chaque locale, plutôt qu'à la demande. */
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
 /**
  * Image Open Graph / Twitter Card par défaut du site, générée en JSX/CSS
  * (aucune photo requise — reprend les couleurs de marque définies dans
- * src/styles/theme.css). S'applique à toutes les pages qui n'ont pas
- * leur propre image (ex. les fiches produit utilisent la vraie photo du
- * produit à la place, voir src/app/produits/[slug]/page.tsx).
+ * src/styles/theme.css). Next.js l'attache automatiquement à toutes les
+ * pages du segment qui n'ont pas leur propre image (ex. les fiches produit
+ * utilisent la vraie photo du produit à la place, voir
+ * src/app/[locale]/produits/[slug]/page.tsx).
+ *
+ * Placée DANS le segment `[locale]` (et non à la racine de `app/`) pour
+ * deux raisons : elle ne concerne que les pages du site, et la garder à la
+ * racine l'attachait aussi à la 404 interne de Next.js (`/_not-found`),
+ * qui n'a aucun layout — donc aucun `metadataBase` — ce qui déclenchait un
+ * avertissement au build. Le visuel étant purement graphique, il est
+ * identique dans les deux langues.
  *
  * Générée une seule fois au build (aucune donnée dynamique ici) et mise en
  * cache — voir la doc Next.js sur `opengraph-image`.
  */
-export default function Image() {
+// Next.js ne génère pas d'assistant `ImageProps` (contrairement à
+// `PageProps`/`LayoutProps`) pour les fichiers de convention d'image : on
+// type donc les paramètres de route à la main.
+export default async function Image(props: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await props.params;
+  const t = await getTranslations({ locale, namespace: "Brand" });
+
   return new ImageResponse(
     (
       <div
@@ -73,7 +96,7 @@ export default function Image() {
               marginBottom: 20,
             }}
           >
-            Depuis 2025 · Abidjan
+            {t("since")}
           </div>
           <div
             style={{
@@ -109,7 +132,7 @@ export default function Image() {
               opacity: 0.75,
             }}
           >
-            Streetwear premium · identité africaine contemporaine
+            {t("ogTagline")}
           </div>
         </div>
       </div>

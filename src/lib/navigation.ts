@@ -1,22 +1,29 @@
 export interface NavLink {
+  /** Chemin « neutre », SANS préfixe de locale : le préfixe `/en` est
+   * ajouté automatiquement par le <Link> de src/i18n/navigation.ts. */
   href: string;
-  label: string;
+  /** Clé de traduction dans le namespace `Nav` (messages/*.json). */
+  key: string;
 }
 
 /**
  * Source unique de la navigation principale : utilisée par le Header
- * (desktop + menu mobile) et par la colonne "Navigation" du Footer.
- * Ajoute une entrée ici pour qu'elle apparaisse partout.
+ * (desktop + menu mobile), par la colonne "Navigation" du Footer et par le
+ * sitemap. Ajoute une entrée ici (plus sa clé dans le namespace `Nav` des
+ * dictionnaires) pour qu'elle apparaisse partout.
  */
 export const NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Accueil" },
-  { href: "/produits", label: "Boutique" },
-  { href: "/a-propos", label: "À propos" },
-  { href: "/contact", label: "Contact" },
+  { href: "/", key: "home" },
+  { href: "/produits", key: "products" },
+  { href: "/a-propos", key: "about" },
+  { href: "/contact", key: "contact" },
 ];
 
 /** Liens utiles additionnels affichés uniquement dans le footer. */
-export const FOOTER_LINKS: NavLink[] = [...NAV_LINKS, { href: "/panier", label: "Panier" }];
+export const FOOTER_LINKS: NavLink[] = [
+  ...NAV_LINKS,
+  { href: "/panier", key: "cart" },
+];
 
 export type SocialPlatform = "instagram" | "tiktok" | "snapchat";
 

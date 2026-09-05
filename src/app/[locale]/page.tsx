@@ -1,26 +1,19 @@
-import Link from "next/link";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import HeroVisual from "@/components/HeroVisual";
 import NewsletterForm from "@/components/NewsletterForm";
 import ProductCard from "@/components/ProductCard";
+import { Link } from "@/i18n/navigation";
 import { getFeaturedProducts } from "@/lib/products";
 
-const STORY_POINTS = [
-  {
-    title: "Petites séries",
-    text: "Chaque drop est produit en quantité limitée pour garder de la valeur à chaque pièce.",
-  },
-  {
-    title: "Matières épaisses",
-    text: "Molleton 420g/m² minimum, coton peigné, doublures satin : rien de fin, rien de fragile.",
-  },
-  {
-    title: "Fabriqué avec soin",
-    text: "Impressions et broderies réalisées en petits ateliers partenaires à Abidjan.",
-  },
-];
+/** Clés du namespace `Home` pour les 3 points de la section "Notre histoire". */
+const STORY_POINT_KEYS = ["storyPoint1", "storyPoint2", "storyPoint3"] as const;
 
-export default function HomePage() {
+export default async function HomePage(props: PageProps<"/[locale]">) {
+  const { locale } = await props.params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "Home" });
   const featured = getFeaturedProducts();
 
   // Nombre de colonnes de la grille "Pièces phares" adapté au nombre réel
@@ -54,23 +47,25 @@ export default function HomePage() {
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 sm:pb-16 lg:pb-20">
           <p className="font-signature text-eyebrow uppercase text-accent">
-            Nouvelle collection
+            {t("heroEyebrow")}
           </p>
+          {/* Accroche en deux temps : la fin de phrase passe en doré sur sa
+              propre ligne visuelle. L'espace insécable typographique entre
+              les deux morceaux est rendu par le `{" "}` explicite, sinon JSX
+              le supprimerait au retour à la ligne du code. */}
           <h1 className="mt-4 max-w-3xl font-display text-display-lg uppercase leading-[0.95] tracking-wide text-foreground sm:text-display-xl">
-            Le streetwear qui coule dans les rues,{" "}
-            <span className="text-accent">pas en rayon.</span>
+            {t("heroTitleLead")}{" "}
+            <span className="text-accent">{t("heroTitleAccent")}</span>
           </h1>
           <p className="mt-5 max-w-md text-sm text-muted sm:text-base lg:max-w-lg lg:text-lg">
-            Depuis Abidjan, DIABS conçoit un streetwear premium à
-            l&apos;identité africaine contemporaine : silhouettes oversize,
-            coupes boxy, finitions soignées.
+            {t("heroText")}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
             <Link
               href="/produits"
               className="rounded-full bg-accent px-6 py-3 text-center font-display uppercase tracking-wide text-accent-foreground transition-transform hover:scale-[1.03] active:scale-[0.98]"
             >
-              Voir la boutique
+              {t("heroCtaShop")}
             </Link>
             <Link
               href="#histoire"
@@ -80,7 +75,7 @@ export default function HomePage() {
               // d'interface.
               className="rounded-full border border-foreground/50 px-6 py-3 text-center font-display uppercase tracking-wide text-foreground transition-colors hover:border-accent hover:text-accent"
             >
-              Notre histoire
+              {t("heroCtaStory")}
             </Link>
           </div>
         </div>
@@ -91,17 +86,17 @@ export default function HomePage() {
         <div className="mb-8 flex items-end justify-between gap-4 sm:mb-10">
           <div>
             <p className="font-signature text-eyebrow uppercase text-accent">
-              Sélection
+              {t("featuredEyebrow")}
             </p>
             <h2 className="mt-2 font-display text-display-lg uppercase text-foreground">
-              Pièces phares
+              {t("featuredTitle")}
             </h2>
           </div>
           <Link
             href="/produits"
             className="hidden shrink-0 text-sm font-medium text-accent hover:underline sm:inline"
           >
-            Tout voir →
+            {t("seeAll")}
           </Link>
         </div>
         <div className={`grid gap-4 sm:gap-6 ${featuredGridCols}`}>
@@ -113,7 +108,7 @@ export default function HomePage() {
           href="/produits"
           className="mt-8 block text-center text-sm font-medium text-accent hover:underline sm:hidden"
         >
-          Tout voir →
+          {t("seeAll")}
         </Link>
       </section>
 
@@ -122,31 +117,29 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div>
             <p className="font-signature text-eyebrow uppercase text-accent">
-              Notre histoire
+              {t("storyEyebrow")}
             </p>
             <h2 className="mt-3 font-display text-display-lg uppercase leading-none text-foreground">
-              Né à Abidjan, pensé pour durer.
+              {t("storyTitle")}
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted sm:text-base">
-              Depuis 2025, DIABS habille la jeunesse ivoirienne avec des
-              pièces conçues en petites séries plutôt qu&apos;en production
-              de masse. Pas de tendance à suivre : juste des coupes
-              franches, des matières qui tiennent, et des drops pensés avec
-              des ateliers indépendants.
+              {t("storyText")}
             </p>
             <Link
               href="/a-propos"
               className="mt-6 inline-flex items-center gap-2 font-display uppercase tracking-wide text-accent hover:underline"
             >
-              Découvrir notre histoire →
+              {t("storyCta")}
             </Link>
           </div>
 
           <ul className="flex flex-col gap-6 sm:gap-8">
-            {STORY_POINTS.map((point) => (
-              <li key={point.title} className="border-l-2 border-accent pl-4">
-                <h3 className="font-medium text-foreground">{point.title}</h3>
-                <p className="mt-1 text-sm text-muted">{point.text}</p>
+            {STORY_POINT_KEYS.map((key) => (
+              <li key={key} className="border-l-2 border-accent pl-4">
+                <h3 className="font-medium text-foreground">
+                  {t(`${key}Title`)}
+                </h3>
+                <p className="mt-1 text-sm text-muted">{t(`${key}Text`)}</p>
               </li>
             ))}
           </ul>
@@ -157,13 +150,13 @@ export default function HomePage() {
       <section className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-16">
           <h2 className="max-w-md font-display text-display-lg uppercase leading-none text-foreground">
-            Prêt·e pour le prochain drop&nbsp;?
+            {t("ctaTitle")}
           </h2>
           <Link
             href="/produits"
             className="w-full flex-shrink-0 rounded-full bg-accent px-8 py-4 text-center font-display uppercase tracking-wide text-accent-foreground transition-transform hover:scale-[1.03] active:scale-[0.98] sm:w-auto"
           >
-            Voir toute la collection
+            {t("ctaButton")}
           </Link>
         </div>
       </section>
@@ -173,14 +166,13 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-16">
           <div>
             <p className="font-signature text-eyebrow uppercase text-accent-foreground/70">
-              Newsletter
+              {t("newsletterEyebrow")}
             </p>
             <h2 className="mt-2 font-display text-display-lg uppercase leading-none text-accent-foreground">
-              Ne rate aucun drop.
+              {t("newsletterTitle")}
             </h2>
             <p className="mt-3 max-w-sm text-sm text-accent-foreground/80">
-              Accès prioritaire aux nouvelles collections et aux séries
-              limitées, directement dans ta boîte mail.
+              {t("newsletterText")}
             </p>
           </div>
           <NewsletterForm />

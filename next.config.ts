@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
   images: {
@@ -19,4 +20,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Branche next-intl sur le build : le plugin crée l'alias `next-intl/config`
+// vers `./src/i18n/request.ts` (emplacement par défaut), qui résout la locale
+// et le dictionnaire de messages à chaque rendu serveur.
+const withNextIntl = createNextIntlPlugin();
+
+export default withNextIntl(nextConfig);

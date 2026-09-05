@@ -1,16 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { useCart } from "@/context/cart-context";
+import { Link, usePathname } from "@/i18n/navigation";
 import { NAV_LINKS } from "@/lib/navigation";
 
 export default function Header() {
+  // `usePathname` de next-intl : renvoie le chemin SANS préfixe de locale,
+  // donc la comparaison ci-dessous fonctionne à l'identique sur `/produits`
+  // et sur `/en/produits`.
   const pathname = usePathname();
   const { itemCount } = useCart();
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations("Header");
+  const tNav = useTranslations("Nav");
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
@@ -24,7 +30,7 @@ export default function Header() {
             DRIP
           </span>
           <span className="font-signature text-xs uppercase tracking-[0.2em] text-accent">
-            by Diabs
+            {t("brandSuffix")}
           </span>
         </Link>
 
@@ -42,13 +48,19 @@ export default function Header() {
                   isActive ? "text-accent" : "text-foreground/80"
                 }`}
               >
-                {link.label}
+                {tNav(link.key)}
               </Link>
             );
           })}
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Sélecteur de langue : masqué sur mobile où il est repris dans
+              le menu déroulant ci-dessous, pour ne pas encombrer la barre. */}
+          <div className="hidden sm:flex">
+            <LocaleSwitcher />
+          </div>
+
           <CartLink itemCount={itemCount} onClick={() => setIsOpen(false)} />
 
           <button
@@ -56,7 +68,7 @@ export default function Header() {
             onClick={() => setIsOpen((open) => !open)}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground sm:hidden"
             aria-expanded={isOpen}
-            aria-label={isOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-label={isOpen ? t("closeMenu") : t("openMenu")}
           >
             <span aria-hidden="true">{isOpen ? "✕" : "☰"}</span>
           </button>
@@ -72,7 +84,7 @@ export default function Header() {
               onClick={() => setIsOpen(false)}
               className="rounded-lg px-2 py-3 text-sm font-medium text-foreground/90 hover:bg-surface"
             >
-              {link.label}
+              {tNav(link.key)}
             </Link>
           ))}
           <Link
@@ -80,8 +92,11 @@ export default function Header() {
             onClick={() => setIsOpen(false)}
             className="rounded-lg px-2 py-3 text-sm font-medium text-foreground/90 hover:bg-surface"
           >
-            Panier{itemCount > 0 ? ` (${itemCount})` : ""}
+            {itemCount > 0 ? t("cartMobile", { count: itemCount }) : t("cart")}
           </Link>
+          <div className="mt-2 border-t border-border px-2 pt-4">
+            <LocaleSwitcher onNavigate={() => setIsOpen(false)} />
+          </div>
         </nav>
       )}
     </header>
@@ -95,15 +110,15 @@ function CartLink({
   itemCount: number;
   onClick?: () => void;
 }) {
+  const t = useTranslations("Header");
+
   return (
     <Link
       href="/panier"
       onClick={onClick}
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors hover:text-accent"
       aria-label={
-        itemCount > 0
-          ? `Panier, ${itemCount} article${itemCount > 1 ? "s" : ""}`
-          : "Panier"
+        itemCount > 0 ? t("cartWithCount", { count: itemCount }) : t("cart")
       }
     >
       <svg

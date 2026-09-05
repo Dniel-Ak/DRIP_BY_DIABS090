@@ -3,14 +3,14 @@
 import { useSearchParams } from "next/navigation";
 
 import ProductsExplorer from "@/components/ProductsExplorer";
-import type { CategoryInfo, Product, ProductCategory } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 
 /**
  * Fine couche client au-dessus de `ProductsExplorer` : lit la catégorie
  * initiale depuis l'URL (`?categorie=...`) via `useSearchParams`, plutôt
  * que via le prop `searchParams` de la page serveur.
  *
- * Pourquoi : lire `searchParams` dans la page (`src/app/produits/page.tsx`)
+ * Pourquoi : lire `searchParams` dans la page (`src/app/[locale]/produits/page.tsx`)
  * forçait tout le rendu de cette page à devenir dynamique (recalculé à
  * chaque requête) alors que le catalogue est statique et ne change qu'au
  * redéploiement. En déplaçant cette seule lecture ici, côté client, la
@@ -29,13 +29,17 @@ export default function ProductsExplorerWithUrlFilter({
   categories,
 }: {
   products: Product[];
-  categories: CategoryInfo[];
+  categories: ProductCategory[];
 }) {
   const searchParams = useSearchParams();
   const categorieParam = searchParams.get("categorie");
 
+  // Le nom du paramètre (`categorie`) et ses valeurs (`polos`, `bonnets`...)
+  // sont IDENTIQUES dans les deux langues : ce sont des clés techniques, pas
+  // du texte affiché. Un lien `/produits?categorie=polos` partagé en
+  // français fonctionne donc tel quel sur `/en/produits?categorie=polos`.
   const initialCategory = categories.some(
-    (category) => category.value === categorieParam
+    (category) => category === categorieParam
   )
     ? (categorieParam as ProductCategory)
     : undefined;

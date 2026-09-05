@@ -1,6 +1,7 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
+import { Link } from "@/i18n/navigation";
 import { FOOTER_LINKS, SOCIAL_LINKS, type SocialPlatform } from "@/lib/navigation";
 
 const SOCIAL_ICONS: Record<SocialPlatform, ReactNode> = {
@@ -42,8 +43,11 @@ const SOCIAL_ICONS: Record<SocialPlatform, ReactNode> = {
   ),
 };
 
-export default function Footer() {
+export default async function Footer() {
   const year = new Date().getFullYear();
+  const t = await getTranslations("Footer");
+  const tNav = await getTranslations("Nav");
+  const tHeader = await getTranslations("Header");
 
   return (
     <footer className="border-t border-border">
@@ -54,24 +58,21 @@ export default function Footer() {
               DRIP
             </span>
             <span className="font-signature text-xs uppercase tracking-[0.2em] text-accent">
-              by Diabs
+              {tHeader("brandSuffix")}
             </span>
           </p>
-          <p className="mt-3 max-w-xs text-sm text-muted">
-            Streetwear premium à l&apos;identité africaine contemporaine,
-            conçu en petites séries à Abidjan.
-          </p>
+          <p className="mt-3 max-w-xs text-sm text-muted">{t("tagline")}</p>
         </div>
 
         <div>
           <p className="font-signature text-eyebrow uppercase text-foreground">
-            Navigation
+            {t("navigation")}
           </p>
           <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">
             {FOOTER_LINKS.filter((link) => link.href !== "/").map((link) => (
               <li key={link.href}>
                 <Link href={link.href} className="hover:text-accent">
-                  {link.label}
+                  {tNav(link.key)}
                 </Link>
               </li>
             ))}
@@ -80,7 +81,7 @@ export default function Footer() {
 
         <div>
           <p className="font-signature text-eyebrow uppercase text-foreground">
-            Contact
+            {t("contact")}
           </p>
           <ul className="mt-3 flex flex-col gap-2 text-sm text-muted">
             <li>
@@ -91,13 +92,13 @@ export default function Footer() {
                 contact.diabs090@gmail.com
               </a>
             </li>
-            <li>Abidjan, Côte d&apos;Ivoire</li>
+            <li>{t("location")}</li>
           </ul>
         </div>
 
         <div>
           <p className="font-signature text-eyebrow uppercase text-foreground">
-            Suivez-nous
+            {t("followUs")}
           </p>
           <ul className="mt-3 flex items-center gap-3">
             {SOCIAL_LINKS.map((social) => (
@@ -106,7 +107,7 @@ export default function Footer() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${social.label} (nouvel onglet)`}
+                  aria-label={`${social.label} ${t("newTab")}`}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground/80 transition-colors hover:border-accent hover:text-accent"
                 >
                   <span className="h-4 w-4">{SOCIAL_ICONS[social.platform]}</span>
@@ -119,7 +120,9 @@ export default function Footer() {
 
       <div className="border-t border-border px-4 py-6 sm:px-6">
         <p className="mx-auto max-w-6xl text-xs text-muted">
-          © {year} DRIP BY DIABS. Tous droits réservés.
+          {/* `String(year)` : passé en nombre, ICU le formaterait avec un
+              séparateur de milliers (« 2 026 »). */}
+          {t("rights", { year: String(year) })}
         </p>
       </div>
     </footer>

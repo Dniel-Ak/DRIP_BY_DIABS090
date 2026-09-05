@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { useCart } from "@/context/cart-context";
@@ -20,6 +21,17 @@ export default function AddToCartPanel({
   stock: Record<string, number>;
 }) {
   const { addItem } = useCart();
+  const t = useTranslations("AddToCart");
+  const tColors = useTranslations("Colors");
+  const tSizes = useTranslations("Sizes");
+
+  // Libellés affichés des coloris et des tailles. La VALEUR stockée dans le
+  // panier (et utilisée comme clé de stock) reste toujours la valeur
+  // française du catalogue — seul l'affichage change de langue.
+  const colorLabel = (color: string) =>
+    tColors.has(color) ? tColors(color) : color;
+  const sizeLabel = (size: string) => (tSizes.has(size) ? tSizes(size) : size);
+
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   // Un seul coloris disponible : pas de choix à faire, on le pré-sélectionne.
   const [selectedColor, setSelectedColor] = useState<string | null>(
@@ -33,14 +45,14 @@ export default function AddToCartPanel({
   if (price === null) {
     return (
       <div className="mt-8">
-        <p className="text-sm font-medium text-foreground">Taille</p>
+        <p className="text-sm font-medium text-foreground">{t("size")}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {sizes.map((size) => (
             <span
               key={size}
               className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground/50"
             >
-              {size}
+              {sizeLabel(size)}
             </span>
           ))}
         </div>
@@ -49,12 +61,9 @@ export default function AddToCartPanel({
           disabled
           className="mt-6 w-full cursor-not-allowed rounded-full bg-accent px-6 py-3 font-display text-lg uppercase tracking-wide text-accent-foreground opacity-40 sm:w-auto sm:px-10"
         >
-          Bientôt disponible
+          {t("comingSoon")}
         </button>
-        <p className="mt-4 text-xs text-muted">
-          Le prix de cette pièce n&apos;est pas encore fixé — revenez
-          bientôt, ou contactez-nous pour plus d&apos;informations.
-        </p>
+        <p className="mt-4 text-xs text-muted">{t("comingSoonNote")}</p>
       </div>
     );
   }
@@ -62,14 +71,14 @@ export default function AddToCartPanel({
   if (allSizesSoldOut) {
     return (
       <div className="mt-8">
-        <p className="text-sm font-medium text-foreground">Taille</p>
+        <p className="text-sm font-medium text-foreground">{t("size")}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {sizes.map((size) => (
             <span
               key={size}
               className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground/50 line-through"
             >
-              {size}
+              {sizeLabel(size)}
             </span>
           ))}
         </div>
@@ -78,12 +87,9 @@ export default function AddToCartPanel({
           disabled
           className="mt-6 w-full cursor-not-allowed rounded-full bg-accent px-6 py-3 font-display text-lg uppercase tracking-wide text-accent-foreground opacity-40 sm:w-auto sm:px-10"
         >
-          Épuisé
+          {t("soldOut")}
         </button>
-        <p className="mt-4 text-xs text-muted">
-          Cette pièce est en rupture de stock pour le moment — contacte-nous
-          pour savoir quand elle sera réassortie.
-        </p>
+        <p className="mt-4 text-xs text-muted">{t("soldOutNote")}</p>
       </div>
     );
   }
@@ -97,7 +103,9 @@ export default function AddToCartPanel({
       {colors.length > 1 && (
         <div className="mb-6">
           <p className="text-sm font-medium text-foreground">
-            Couleur{selectedColor ? ` — ${selectedColor}` : ""}
+            {selectedColor
+              ? t("colorWithValue", { color: colorLabel(selectedColor) })
+              : t("color")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {colors.map((color) => (
@@ -115,14 +123,14 @@ export default function AddToCartPanel({
                     : "border-border text-foreground/80 hover:border-accent hover:text-accent"
                 }`}
               >
-                {color}
+                {colorLabel(color)}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <p className="text-sm font-medium text-foreground">Taille</p>
+      <p className="text-sm font-medium text-foreground">{t("size")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {sizes.map((size) => {
           const available = isSizeAvailable(size);
@@ -136,7 +144,7 @@ export default function AddToCartPanel({
                 setAdded(false);
               }}
               aria-pressed={selectedSize === size}
-              title={available ? undefined : "Épuisé"}
+              title={available ? undefined : t("soldOut")}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                 !available
                   ? "cursor-not-allowed border-border text-foreground/30 line-through"
@@ -145,7 +153,7 @@ export default function AddToCartPanel({
                     : "border-border text-foreground/80 hover:border-accent hover:text-accent"
               }`}
             >
-              {size}
+              {sizeLabel(size)}
             </button>
           );
         })}
@@ -165,14 +173,14 @@ export default function AddToCartPanel({
         aria-live="polite"
         className="mt-6 w-full rounded-full bg-accent px-6 py-3 font-display text-lg uppercase tracking-wide text-accent-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-10"
       >
-        {added ? "Ajouté ✓" : "Ajouter au panier"}
+        {added ? t("added") : t("addToCart")}
       </button>
 
       {!canAdd && (
         <p className="mt-2 text-xs text-muted">
           {colors.length > 1 && !selectedColor
-            ? "Sélectionne une couleur et une taille pour continuer."
-            : "Sélectionne une taille pour continuer."}
+            ? t("selectColorAndSize")
+            : t("selectSize")}
         </p>
       )}
     </div>

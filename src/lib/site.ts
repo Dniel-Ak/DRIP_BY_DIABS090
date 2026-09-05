@@ -15,8 +15,11 @@ export const SITE_URL = (
 
 export const SITE_NAME = "DRIP BY DIABS";
 
-export const SITE_DESCRIPTION =
-  "DRIP BY DIABS — streetwear premium né à Abidjan : polos, bonnets et pièces à l'identité africaine contemporaine, conçus en petites séries.";
-
-// Utilisé pour `openGraph.locale` (Facebook/Meta) — français, Côte d'Ivoire.
-export const SITE_LOCALE = "fr_CI";
+/**
+ * Locale au format `openGraph.locale` (Facebook/Meta), déduite de la locale
+ * du site : français de Côte d'Ivoire pour la version par défaut, anglais
+ * international pour la version `/en`.
+ */
+export function ogLocaleFor(locale: string): string {
+  return locale === "en" ? "en_US" : "fr_CI";
+}

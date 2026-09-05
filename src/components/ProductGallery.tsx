@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Image from "next/image";
 
@@ -20,6 +21,7 @@ export default function ProductGallery({
   name: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const t = useTranslations("ProductDetail");
 
   if (images.length === 0) {
     return <ProductVisual slug={slug} name={name} className="aspect-square w-full" />;
@@ -51,7 +53,11 @@ export default function ProductGallery({
               key={src}
               type="button"
               onClick={() => setActiveIndex(index)}
-              aria-label={`Photo ${index + 1} sur ${images.length} — ${name}`}
+              aria-label={t("galleryThumb", {
+                index: index + 1,
+                total: images.length,
+                name,
+              })}
               aria-current={index === activeIndex}
               className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-colors ${
                 index === activeIndex

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { useId } from "react";
 
 /**
@@ -9,6 +10,7 @@ import { useId } from "react";
  */
 export default function HeroVisual({ className = "" }: { className?: string }) {
   const grainId = `hero-grain-${useId()}`;
+  const t = useTranslations("Brand");
 
   return (
     <div className={`overflow-hidden bg-background ${className}`}>
@@ -31,7 +33,7 @@ export default function HeroVisual({ className = "" }: { className?: string }) {
         </span>
         <span className="h-1 w-1 rounded-full bg-accent-foreground/60" />
         <span className="font-signature text-eyebrow uppercase text-accent-foreground/80">
-          Depuis 2025 · Abidjan
+          {t("since")}
         </span>
       </div>
 

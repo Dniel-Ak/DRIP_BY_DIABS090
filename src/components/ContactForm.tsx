@@ -1,11 +1,26 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
+
+/**
+ * Sujets du formulaire : la VALEUR envoyée à l'API (et donc reprise dans
+ * l'e-mail reçu par l'équipe DIABS à Abidjan) reste toujours en français,
+ * seul le libellé affiché est traduit — même logique que le message de
+ * commande WhatsApp/e-mail (voir src/components/CartView.tsx).
+ */
+const SUBJECT_OPTIONS = [
+  { value: "Question sur une commande", labelKey: "subjectOrder" },
+  { value: "Question sur un produit", labelKey: "subjectProduct" },
+  { value: "Partenariat / presse", labelKey: "subjectPress" },
+  { value: "Autre", labelKey: "subjectOther" },
+];
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("ContactForm");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,15 +44,14 @@ export default function ContactForm() {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(
-          result.error || "Le message n'a pas pu être envoyé."
-        );
+        // `result.error` vient de l'API (src/app/api/contact/route.ts), qui
+        // répond volontairement en français — hors périmètre de la
+        // traduction. Le repli, lui, est traduit.
+        throw new Error(result.error || t("sendError"));
       }
       setSubmitted(true);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Une erreur est survenue."
-      );
+      setError(err instanceof Error ? err.message : t("genericError"));
     } finally {
       setIsSending(false);
     }
@@ -49,7 +63,7 @@ export default function ContactForm() {
         role="status"
         className="rounded-2xl border border-accent/40 bg-surface p-6 text-sm text-foreground"
       >
-        Merci pour ton message ! Nous te répondons sous 48h ouvrées.
+        {t("success")}
       </div>
     );
   }
@@ -58,7 +72,7 @@ export default function ContactForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2 text-sm text-foreground">
-          Nom
+          {t("name")}
           <input
             type="text"
             name="name"
@@ -67,7 +81,7 @@ export default function ContactForm() {
           />
         </label>
         <label className="flex flex-col gap-2 text-sm text-foreground">
-          E-mail
+          {t("email")}
           <input
             type="email"
             name="email"
@@ -78,21 +92,22 @@ export default function ContactForm() {
       </div>
 
       <label className="flex flex-col gap-2 text-sm text-foreground">
-        Sujet
+        {t("subject")}
         <select
           name="subject"
-          defaultValue="Question sur une commande"
+          defaultValue={SUBJECT_OPTIONS[0].value}
           className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-foreground focus:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
-          <option>Question sur une commande</option>
-          <option>Question sur un produit</option>
-          <option>Partenariat / presse</option>
-          <option>Autre</option>
+          {SUBJECT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {t(option.labelKey)}
+            </option>
+          ))}
         </select>
       </label>
 
       <label className="flex flex-col gap-2 text-sm text-foreground">
-        Message
+        {t("message")}
         <textarea
           name="message"
           required
@@ -112,7 +127,7 @@ export default function ContactForm() {
         disabled={isSending}
         className="mt-2 w-full rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:px-10"
       >
-        {isSending ? "Envoi…" : "Envoyer"}
+        {isSending ? t("sending") : t("send")}
       </button>
     </form>
   );

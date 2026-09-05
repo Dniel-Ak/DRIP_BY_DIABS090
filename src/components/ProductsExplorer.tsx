@@ -1,16 +1,19 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import ProductCard from "@/components/ProductCard";
-import type { CategoryInfo, Product, ProductCategory } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 
 type SortOrder = "pertinence" | "prix-asc" | "prix-desc";
 
-const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-  { value: "pertinence", label: "Pertinence" },
-  { value: "prix-asc", label: "Prix croissant" },
-  { value: "prix-desc", label: "Prix décroissant" },
+/** Valeurs de tri : clés techniques (jamais affichées telles quelles), le
+ * libellé vient du namespace `Explorer` des dictionnaires. */
+const SORT_OPTIONS: { value: SortOrder; labelKey: string }[] = [
+  { value: "pertinence", labelKey: "sortRelevance" },
+  { value: "prix-asc", labelKey: "sortPriceAsc" },
+  { value: "prix-desc", labelKey: "sortPriceDesc" },
 ];
 
 /** Ordre d'affichage privilégié pour les tailles connues ; les autres
@@ -18,14 +21,14 @@ const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
  * alphabétique. */
 const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 
-function sortSizes(sizes: string[]): string[] {
+function sortSizes(sizes: string[], locale: string): string[] {
   return [...sizes].sort((a, b) => {
     const indexA = SIZE_ORDER.indexOf(a);
     const indexB = SIZE_ORDER.indexOf(b);
     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
     if (indexA !== -1) return -1;
     if (indexB !== -1) return 1;
-    return a.localeCompare(b, "fr");
+    return a.localeCompare(b, locale);
   });
 }
 
@@ -35,18 +38,33 @@ export default function ProductsExplorer({
   initialCategory,
 }: {
   products: Product[];
-  categories: CategoryInfo[];
+  /** Clés de catégorie (`polos`, `bonnets`...) : identifiants techniques
+   * utilisés pour filtrer et dans l'URL, traduits à l'affichage seulement. */
+  categories: ProductCategory[];
   initialCategory?: ProductCategory;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("Explorer");
+  const tCategories = useTranslations("Categories");
+  const tSizes = useTranslations("Sizes");
+
   const [activeCategory, setActiveCategory] = useState<
     ProductCategory | undefined
   >(initialCategory);
   const [activeSizes, setActiveSizes] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>("pertinence");
 
+  /** Libellé affiché d'une taille : "Taille unique" → "One size" en
+   * anglais. La VALEUR reste inchangée (clé de stock et de filtre). */
+  const sizeLabel = (size: string) => (tSizes.has(size) ? tSizes(size) : size);
+
   const availableSizes = useMemo(
-    () => sortSizes(Array.from(new Set(products.flatMap((p) => p.sizes)))),
-    [products]
+    () =>
+      sortSizes(
+        Array.from(new Set(products.flatMap((p) => p.sizes))),
+        locale
+      ),
+    [products, locale]
   );
 
   function toggleSize(size: string) {
@@ -89,7 +107,7 @@ export default function ProductsExplorer({
     activeSizes.length > 0 ||
     sortOrder !== "pertinence";
 
-  // Comme sur la page d'accueil (voir src/app/page.tsx) : avec la classe
+  // Comme sur la page d'accueil (voir src/app/[locale]/page.tsx) : avec la classe
   // fixe `lg:grid-cols-4` d'origine, filtrer sur une catégorie qui ne
   // contient que 1 à 3 produits laissait les cartes plaquées à gauche
   // avec un grand vide à droite sur desktop. On limite donc les colonnes
@@ -115,7 +133,7 @@ export default function ProductsExplorer({
       <div className="flex flex-col gap-6 border-b border-border pb-8">
         <div>
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
-            Catégorie
+            {t("categoryFilter")}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -128,25 +146,25 @@ export default function ProductsExplorer({
                   : "border-border text-foreground/80 hover:border-accent hover:text-accent"
               }`}
             >
-              Tout
+              {t("all")}
             </button>
             {categories.map((category) => (
               <button
-                key={category.value}
+                key={category}
                 type="button"
                 onClick={() =>
                   setActiveCategory((current) =>
-                    current === category.value ? undefined : category.value
+                    current === category ? undefined : category
                   )
                 }
-                aria-pressed={activeCategory === category.value}
+                aria-pressed={activeCategory === category}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                  activeCategory === category.value
+                  activeCategory === category
                     ? "border-accent bg-accent text-accent-foreground"
                     : "border-border text-foreground/80 hover:border-accent hover:text-accent"
                 }`}
               >
-                {category.label}
+                {tCategories(category)}
               </button>
             ))}
           </div>
@@ -155,7 +173,7 @@ export default function ProductsExplorer({
         {availableSizes.length > 0 && (
           <div>
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
-              Taille
+              {t("sizeFilter")}
             </p>
             <div className="flex flex-wrap gap-2">
               {availableSizes.map((size) => (
@@ -170,7 +188,7 @@ export default function ProductsExplorer({
                       : "border-border text-foreground/80 hover:border-accent hover:text-accent"
                   }`}
                 >
-                  {size}
+                  {sizeLabel(size)}
                 </button>
               ))}
             </div>
@@ -180,7 +198,7 @@ export default function ProductsExplorer({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <label className="flex items-center gap-3 text-sm text-foreground/80">
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              Trier par
+              {t("sortBy")}
             </span>
             <select
               value={sortOrder}
@@ -195,7 +213,7 @@ export default function ProductsExplorer({
                   value={option.value}
                   className="bg-background text-foreground"
                 >
-                  {option.label}
+                  {t(option.labelKey)}
                 </option>
               ))}
             </select>
@@ -207,14 +225,14 @@ export default function ProductsExplorer({
               onClick={resetFilters}
               className="text-sm text-muted underline-offset-2 hover:text-accent hover:underline"
             >
-              Réinitialiser les filtres
+              {t("resetFilters")}
             </button>
           )}
         </div>
       </div>
 
       <p className="mb-6 mt-8 text-sm text-muted">
-        {filtered.length} produit{filtered.length > 1 ? "s" : ""}
+        {t("resultCount", { count: filtered.length })}
       </p>
 
       {filtered.length > 0 ? (
@@ -224,9 +242,7 @@ export default function ProductsExplorer({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted">
-          Aucun produit ne correspond à ces filtres pour le moment.
-        </p>
+        <p className="text-sm text-muted">{t("noResults")}</p>
       )}
     </div>
   );

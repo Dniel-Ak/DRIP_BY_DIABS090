@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import ProductImage from "@/components/ProductImage";
 import { useCart, type CartLine } from "@/context/cart-context";
+import { Link } from "@/i18n/navigation";
 import { formatPrice, getProductBySlug } from "@/lib/products";
 import type { Product } from "@/types/product";
 
@@ -13,8 +14,31 @@ import type { Product } from "@/types/product";
 const ORDER_WHATSAPP_NUMBER = "2250797821052";
 const ORDER_EMAIL = "contact.diabs090@gmail.com";
 
+/** Objet de l'e-mail de commande — en français, voir `buildOrderMessage`. */
+const ORDER_EMAIL_SUBJECT = "Nouvelle commande — DIABS";
+
 type CartLineWithProduct = CartLine & { product: Product };
 
+/**
+ * Récapitulatif de commande envoyé via WhatsApp ou e-mail.
+ *
+ * ⚠️ CE MESSAGE EST TOUJOURS EN FRANÇAIS, quelle que soit la langue
+ * affichée sur le site — c'est volontaire et il ne faut pas le traduire.
+ * Il n'est pas lu par le client : il est lu par l'équipe DIABS à Abidjan,
+ * francophone, qui traite la commande. Un client anglophone envoie donc un
+ * récapitulatif en français (nom du produit, taille, coloris, quantité,
+ * sous-total — des données qu'il reconnaît de toute façon depuis son
+ * panier), et l'équipe le reçoit dans SA langue de travail, sans avoir à
+ * le traduire ni risquer un contresens sur une commande.
+ *
+ * Seuls les libellés des BOUTONS qui ouvrent WhatsApp/l'e-mail sont
+ * traduits (voir le namespace `Cart` des dictionnaires) — pas le contenu
+ * du message lui-même.
+ *
+ * Concrètement : `formatPrice` est appelé ici sans locale, ce qui applique
+ * le format français par défaut (« 15 000 F CFA »), et aucun `t()` n'est
+ * utilisé dans cette fonction.
+ */
 function buildOrderMessage(
   lines: CartLineWithProduct[],
   subtotal: number
@@ -41,6 +65,18 @@ export default function CartView() {
   const { items, updateQuantity, removeItem, clearCart, itemCount } =
     useCart();
 
+  const locale = useLocale();
+  const t = useTranslations("Cart");
+  const tColors = useTranslations("Colors");
+  const tSizes = useTranslations("Sizes");
+
+  // Libellés affichés seulement : les valeurs stockées dans le panier
+  // (taille, coloris) restent les valeurs françaises du catalogue, qui
+  // servent de clés de stock et alimentent le message de commande.
+  const sizeLabel = (size: string) => (tSizes.has(size) ? tSizes(size) : size);
+  const colorLabel = (color: string) =>
+    tColors.has(color) ? tColors(color) : color;
+
   const [email, setEmail] = useState("");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -59,7 +95,7 @@ export default function CartView() {
 
   const orderMessage = buildOrderMessage(lines, subtotal);
   const whatsappHref = `https://wa.me/${ORDER_WHATSAPP_NUMBER}?text=${encodeURIComponent(orderMessage)}`;
-  const mailHref = `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent("Nouvelle commande — DIABS")}&body=${encodeURIComponent(orderMessage)}`;
+  const mailHref = `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent(ORDER_EMAIL_SUBJECT)}&body=${encodeURIComponent(orderMessage)}`;
 
   const hasUnpricedItems = lines.some((line) => line.product.price === null);
   const isEmailValid = /^\S+@\S+\.\S+$/.test(email);
@@ -73,6 +109,10 @@ export default function CartView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
+          // Langue courante : sert uniquement à ce que Paystack nous
+          // redirige vers la page de confirmation de la BONNE version du
+          // site (`/paiement/confirmation` ou `/en/paiement/confirmation`).
+          locale,
           lines: lines.map((line) => ({
             slug: line.slug,
             size: line.size,
@@ -83,14 +123,15 @@ export default function CartView() {
       });
       const data = await response.json();
       if (!response.ok || !data.url) {
-        throw new Error(
-          data.error || "Le paiement en ligne n'est pas disponible pour le moment."
-        );
+        // `data.error` vient de l'API (src/app/api/checkout/route.ts), qui
+        // répond volontairement en français — hors périmètre de la
+        // traduction. Le repli, lui, est traduit.
+        throw new Error(data.error || t("checkoutUnavailable"));
       }
       window.location.assign(data.url);
     } catch (error) {
       setCheckoutError(
-        error instanceof Error ? error.message : "Une erreur est survenue."
+        error instanceof Error ? error.message : t("genericError")
       );
       setIsRedirecting(false);
     }
@@ -100,19 +141,17 @@ export default function CartView() {
     return (
       <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center sm:px-6">
         <p className="font-signature text-eyebrow uppercase text-accent">
-          Panier
+          {t("eyebrow")}
         </p>
         <h1 className="mt-4 font-display text-display-lg uppercase text-foreground">
-          Ton panier est vide.
+          {t("emptyTitle")}
         </h1>
-        <p className="mt-4 text-muted">
-          Ajoute une pièce depuis la boutique pour commencer ta sélection.
-        </p>
+        <p className="mt-4 text-muted">{t("emptyText")}</p>
         <Link
           href="/produits"
           className="mt-8 rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground"
         >
-          Voir la boutique
+          {t("emptyCta")}
         </Link>
       </div>
     );
@@ -121,10 +160,10 @@ export default function CartView() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
       <p className="font-signature text-eyebrow uppercase text-accent">
-        Panier
+        {t("eyebrow")}
       </p>
       <h1 className="mt-4 font-display text-display-lg uppercase text-foreground">
-        {itemCount} article{itemCount > 1 ? "s" : ""}
+        {t("itemCount", { count: itemCount })}
       </h1>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_320px]">
@@ -157,12 +196,15 @@ export default function CartView() {
                       {line.product.name}
                     </Link>
                     <p className="mt-1 text-sm text-muted">
-                      Taille {line.size}
-                      {line.color ? ` · ${line.color}` : ""}
+                      {t("size", { size: sizeLabel(line.size) })}
+                      {line.color ? ` · ${colorLabel(line.color)}` : ""}
                     </p>
                   </div>
                   <p className="font-display text-display-sm text-accent">
-                    {formatPrice((line.product.price ?? 0) * line.quantity)}
+                    {formatPrice(
+                      (line.product.price ?? 0) * line.quantity,
+                      locale
+                    )}
                   </p>
                 </div>
 
@@ -179,7 +221,7 @@ export default function CartView() {
                         )
                       }
                       className="px-3 py-1 text-foreground transition-colors hover:text-accent"
-                      aria-label={`Diminuer la quantité de ${line.product.name}`}
+                      aria-label={t("decrease", { name: line.product.name })}
                     >
                       −
                     </button>
@@ -197,7 +239,7 @@ export default function CartView() {
                         )
                       }
                       className="px-3 py-1 text-foreground transition-colors hover:text-accent"
-                      aria-label={`Augmenter la quantité de ${line.product.name}`}
+                      aria-label={t("increase", { name: line.product.name })}
                     >
                       +
                     </button>
@@ -207,7 +249,7 @@ export default function CartView() {
                     onClick={() => removeItem(line.slug, line.size, line.color)}
                     className="text-xs text-muted underline-offset-2 transition-colors hover:text-accent hover:underline"
                   >
-                    Retirer
+                    {t("remove")}
                   </button>
                 </div>
               </div>
@@ -217,25 +259,22 @@ export default function CartView() {
 
         <aside className="h-fit rounded-2xl border border-border p-6">
           <h2 className="font-display text-display-sm uppercase text-foreground">
-            Résumé
+            {t("summary")}
           </h2>
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-muted">Sous-total</span>
+            <span className="text-muted">{t("subtotal")}</span>
             <span className="font-display text-display-sm text-foreground">
-              {formatPrice(subtotal)}
+              {formatPrice(subtotal, locale)}
             </span>
           </div>
-          <p className="mt-2 text-xs text-muted">
-            Livraison et modalités de paiement confirmées directement avec
-            toi après ta commande.
-          </p>
+          <p className="mt-2 text-xs text-muted">{t("deliveryNote")}</p>
 
           <p className="mt-6 text-sm font-medium text-foreground">
-            Paiement en ligne
+            {t("onlinePayment")}
           </p>
           <label htmlFor="checkout-email" className="mt-3 block">
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              E-mail
+              {t("emailLabel")}
             </span>
             <input
               id="checkout-email"
@@ -245,17 +284,13 @@ export default function CartView() {
                 setEmail(event.target.value);
                 setCheckoutError(null);
               }}
-              placeholder="ton@email.com"
+              placeholder={t("emailPlaceholder")}
               className="mt-2 w-full rounded-full border border-border bg-transparent px-4 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
           </label>
 
           {hasUnpricedItems && (
-            <p className="mt-2 text-xs text-accent">
-              Le paiement en ligne n&apos;est pas disponible tant que ton
-              panier contient un article dont le prix n&apos;est pas encore
-              fixé — commande-le plutôt via WhatsApp ou e-mail ci-dessous.
-            </p>
+            <p className="mt-2 text-xs text-accent">{t("unpricedWarning")}</p>
           )}
           {checkoutError && (
             <p role="alert" className="mt-2 text-xs text-accent">
@@ -269,15 +304,13 @@ export default function CartView() {
             onClick={handlePaystackCheckout}
             className="mt-3 w-full rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
           >
-            {isRedirecting ? "Redirection…" : "Payer en ligne — Paystack"}
+            {isRedirecting ? t("redirecting") : t("payOnline")}
           </button>
-          <p className="mt-2 text-xs text-muted">
-            Paiement sécurisé via Paystack (mobile money, carte bancaire).
-          </p>
+          <p className="mt-2 text-xs text-muted">{t("secureCaption")}</p>
 
           <div className="mt-6 flex items-center gap-3 text-xs text-muted">
             <span className="h-px flex-1 bg-border" />
-            ou sans payer en ligne
+            {t("orWithoutOnlinePayment")}
             <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -288,28 +321,24 @@ export default function CartView() {
               rel="noopener noreferrer"
               className="flex w-full items-center justify-center gap-2 rounded-full border border-accent px-6 py-3 text-center font-display uppercase tracking-wide text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Commander via WhatsApp
-              <span className="sr-only"> (nouvel onglet)</span>
+              {t("orderWhatsApp")}
+              <span className="sr-only"> {t("newTab")}</span>
             </a>
             <a
               href={mailHref}
               className="flex w-full items-center justify-center gap-2 rounded-full border border-border px-6 py-3 text-center font-display uppercase tracking-wide text-foreground transition-colors hover:border-accent hover:text-accent"
             >
-              Commander par e-mail
+              {t("orderEmail")}
             </a>
           </div>
-          <p className="mt-3 text-xs text-muted">
-            Un message récapitulatif pré-rempli s&apos;ouvre avec ta
-            commande — il ne reste plus qu&apos;à l&apos;envoyer. Paiement
-            organisé directement avec toi ensuite.
-          </p>
+          <p className="mt-3 text-xs text-muted">{t("orderMessageNote")}</p>
 
           <button
             type="button"
             onClick={clearCart}
             className="mt-4 text-xs text-muted underline-offset-2 hover:text-accent hover:underline"
           >
-            Vider le panier
+            {t("clearCart")}
           </button>
         </aside>
       </div>

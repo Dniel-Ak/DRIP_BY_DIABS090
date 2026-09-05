@@ -1,12 +1,20 @@
-import type { CategoryInfo, Product } from "@/types/product";
+import type { Product, ProductCategory } from "@/types/product";
 
-export const categories: CategoryInfo[] = [
-  { value: "polos", label: "Polos" },
-  { value: "bonnets", label: "Bonnets" },
-  { value: "hoodies", label: "Hoodies" },
-  { value: "t-shirts", label: "T-Shirts" },
-  { value: "vestes", label: "Vestes" },
-  { value: "accessoires", label: "Accessoires" },
+/**
+ * Catégories du catalogue, dans leur ordre d'affichage. Ce sont des CLÉS
+ * techniques : elles servent d'identifiant de filtre dans l'URL
+ * (`/produits?categorie=polos`) et de champ `category` des produits — elles
+ * ne changent donc JAMAIS d'une langue à l'autre. Le libellé affiché est
+ * traduit via le namespace `Categories` des dictionnaires
+ * (messages/fr.json, messages/en.json), indexé par cette même clé.
+ */
+export const categories: ProductCategory[] = [
+  "polos",
+  "bonnets",
+  "hoodies",
+  "t-shirts",
+  "vestes",
+  "accessoires",
 ];
 
 export const products: Product[] = [

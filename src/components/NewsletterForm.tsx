@@ -1,9 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
 export default function NewsletterForm() {
   const [submitted, setSubmitted] = useState(false);
+  const t = useTranslations("Newsletter");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,7 +18,7 @@ export default function NewsletterForm() {
         role="status"
         className="font-display text-display-sm uppercase text-accent-foreground"
       >
-        Bienvenue dans la liste ✓
+        {t("success")}
       </p>
     );
   }
@@ -27,14 +29,14 @@ export default function NewsletterForm() {
       className="flex w-full max-w-md flex-col gap-3 sm:flex-row"
     >
       <label className="sr-only" htmlFor="newsletter-email">
-        Adresse e-mail
+        {t("emailLabel")}
       </label>
       <input
         id="newsletter-email"
         type="email"
         name="email"
         required
-        placeholder="ton@email.com"
+        placeholder={t("emailPlaceholder")}
         // Bordure et placeholder à opacité relevée par rapport à l'origine
         // (30%/50%) : sur le fond doré (--accent) de cette section, ces
         // valeurs tombaient sous le seuil WCAG (respectivement 3:1 pour un
@@ -46,7 +48,7 @@ export default function NewsletterForm() {
         type="submit"
         className="flex-shrink-0 rounded-full bg-accent-foreground px-6 py-3 font-display uppercase tracking-wide text-accent transition-opacity hover:opacity-90"
       >
-        Je m&apos;inscris
+        {t("submit")}
       </button>
     </form>
   );

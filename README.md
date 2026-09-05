@@ -36,6 +36,22 @@ Les liens du header et du footer viennent d'une seule source, **`src/lib/navigat
 
 Pages disponibles : Accueil (`/`), Boutique (`/produits`), Fiche produit (`/produits/[slug]`, une page par produit), Panier (`/panier`), À propos (`/a-propos`), Contact (`/contact`).
 
+## Langues (français / anglais)
+
+Le site est bilingue via **next-intl** (App Router) :
+
+- **Le français est la langue par défaut et reste à la racine, sans préfixe** : `/`, `/produits`, `/contact`… — toutes les URLs déjà partagées (QR codes, bio Instagram) continuent de fonctionner à l'identique. **L'anglais vit sous `/en`** : `/en`, `/en/produits`, `/en/contact`…
+- **Aucune détection automatique** : personne n'est redirigé selon la langue de son navigateur ou son pays. Tout le monde arrive en français ; l'anglais s'obtient uniquement via le sélecteur **FR / EN** du header (`src/components/LocaleSwitcher.tsx`), qui bascule la page courante — pas l'accueil.
+- **Textes traduits** : `messages/fr.json` et `messages/en.json`. Pour changer un libellé, modifie la clé correspondante dans les deux fichiers.
+- **Configuration** : `src/i18n/routing.ts` (locales, préfixe, détection désactivée), `src/i18n/request.ts` (chargement des dictionnaires), `src/i18n/navigation.ts` (`Link`, `useRouter`, `usePathname`, `getPathname` conscients de la locale — à utiliser à la place de `next/link` / `next/navigation`) et `src/proxy.ts` (le « proxy » de Next.js 16, ex-`middleware.ts`).
+- **Ce qui n'est JAMAIS traduit** :
+  - les **noms de produits** ("Young Rich Papi FC", "Bonnet DIABS 090"…) — ce sont des noms propres de marque ;
+  - les **slugs et clés de catégorie** (`/produits/bonnet-diabs-090`, `?categorie=polos`) — identiques dans les deux langues, seuls les libellés affichés changent (`Bonnets` → `Beanies`, `Vestes` → `Jackets`…) ;
+  - le **message de commande WhatsApp / e-mail** (`buildOrderMessage` dans `src/components/CartView.tsx`) et l'**objet du formulaire de contact** : ils sont lus par l'équipe DIABS à Abidjan, donc toujours en français, même quand le client navigue en anglais ;
+  - les **messages d'erreur des routes API** (`/api/checkout`, `/api/contact`), restés en français.
+- **Descriptions produit** : le français est dans `src/data/products.ts`, l'anglais dans `src/data/products.en.ts` (indexé par slug). Un produit sans traduction retombe automatiquement sur le texte français.
+- **SEO** : chaque page déclare son `canonical` et ses `alternates.languages` (hreflang `fr`, `en`, `x-default`) ; le `sitemap.xml` liste chaque page une fois avec ses deux variantes linguistiques.
+
 ## Panier
 
 Le panier (`src/context/cart-context.tsx`) est un vrai state partagé dans toute l'app : ajout depuis une fiche produit (taille + couleur), compteur dans le header, page `/panier` avec quantités, suppression et persistance dans `localStorage` (survit à un rechargement, avec migration automatique des anciens paniers enregistrés avant l'ajout de la couleur).
@@ -144,7 +160,7 @@ Pour ajouter un **nouveau produit** au catalogue : il doit avoir une entrée dan
 
 ## Page d'accueil
 
-`src/app/page.tsx` suit cinq sections, mobile-first : hero (grand visuel de marque + accroche, `src/components/HeroVisual.tsx`), pièces phares (4 produits), notre histoire (courte, avec lien vers `/a-propos`), un bandeau CTA vers la boutique, puis la bannière newsletter (`src/components/NewsletterForm.tsx`, démo sans backend). Le hero visuel est généré entièrement en CSS/SVG (bloc doré diagonal + wordmark surdimensionné) — à remplacer par une vraie photo de campagne dès que vous en avez une, en gardant le même conteneur `absolute inset-0`.
+`src/app/[locale]/page.tsx` suit cinq sections, mobile-first : hero (grand visuel de marque + accroche, `src/components/HeroVisual.tsx`), pièces phares (4 produits), notre histoire (courte, avec lien vers `/a-propos`), un bandeau CTA vers la boutique, puis la bannière newsletter (`src/components/NewsletterForm.tsx`, démo sans backend). Le hero visuel est généré entièrement en CSS/SVG (bloc doré diagonal + wordmark surdimensionné) — à remplacer par une vraie photo de campagne dès que vous en avez une, en gardant le même conteneur `absolute inset-0`.
 
 ## Catalogue produits
 
@@ -156,7 +172,7 @@ Catalogue actuel : 2 polos réels de la collection Polos (Young Rich Papi FC, Go
 
 ## Boutique et fiche produit
 
-- `/produits` (`src/app/produits/page.tsx` + `src/components/ProductsExplorer.tsx`) : grille produits avec filtres par catégorie et par taille, tri par prix (croissant/décroissant), à partir des données de `src/data/products.ts`.
+- `/produits` (`src/app/[locale]/produits/page.tsx` + `src/components/ProductsExplorer.tsx`) : grille produits avec filtres par catégorie et par taille, tri par prix (croissant/décroissant), à partir des données de `src/data/products.ts`.
 - `/produits/[slug]` : galerie d'images (`src/components/ProductGallery.tsx`), sélection de taille et de couleur, ajout au panier, description détaillée, section produits similaires.
 
 ## Performance
@@ -174,11 +190,11 @@ Quelques choix faits spécifiquement pour la vitesse du site :
 **Où configurer l'URL réelle du site :** toutes les métadonnées ci-dessous (URLs canoniques, sitemap, robots.txt, images de partage) sont construites à partir d'une seule variable, `NEXT_PUBLIC_SITE_URL` (voir `.env.local.example` et `src/lib/site.ts`) — une valeur provisoire (`https://www.dripbydiabs.com`) est utilisée tant qu'elle n'est pas définie. **Mets-la à jour avec le vrai nom de domaine dès que le site est déployé**, sinon les liens partagés sur les réseaux et le sitemap pointeront vers ce nom provisoire.
 
 - **Title, description, Open Graph, Twitter Card** sur chaque page, construits par `src/lib/seo.ts` (`buildMetadata()`) pour rester cohérents sans dupliquer le travail : `/`, `/produits`, `/produits/[slug]`, `/a-propos`, `/contact`. La Twitter Card n'a volontairement pas de titre/description/image répétés à la main : Next.js les complète automatiquement à partir de l'Open Graph de la page (comportement documenté de Next.js).
-- **Image de partage par défaut** générée en code (`src/app/opengraph-image.tsx`, sans photo requise) aux couleurs de la marque ; les fiches produit utilisent à la place la vraie photo du produit.
+- **Image de partage par défaut** générée en code (`src/app/[locale]/opengraph-image.tsx`, sans photo requise) aux couleurs de la marque ; les fiches produit utilisent à la place la vraie photo du produit.
 - **Pages exclues du référencement** (`robots: { index: false }`) : `/panier` (contenu personnel à chaque visiteur) et `/paiement/confirmation` (page transactionnelle avec référence de commande dans l'URL) — voir `src/app/robots.ts`, qui les bloque aussi explicitement au crawl.
 - **`sitemap.xml`** (`src/app/sitemap.ts`) généré à partir du catalogue : toute nouvelle fiche produit y apparaît automatiquement dès qu'elle est ajoutée à `src/data/products.ts`, sans mise à jour manuelle.
 - **`robots.txt`** (`src/app/robots.ts`) : autorise tout sauf `/api/`, `/panier` et `/paiement/`, référence le sitemap.
-- **Données structurées schema.org (JSON-LD)** : une fiche `Organization` (nom, logo, réseaux sociaux) dans `src/app/layout.tsx`, et une fiche `Product` complète (prix, devise XOF, disponibilité en stock, image) sur chaque `/produits/[slug]` (`src/app/produits/[slug]/page.tsx`) — la disponibilité (`InStock`/`OutOfStock`) est calculée automatiquement à partir du stock réel. Validable avec le [Rich Results Test de Google](https://search.google.com/test/rich-results).
+- **Données structurées schema.org (JSON-LD)** : une fiche `Organization` (nom, logo, réseaux sociaux) dans `src/app/[locale]/layout.tsx`, et une fiche `Product` complète (prix, devise XOF, disponibilité en stock, image) sur chaque `/produits/[slug]` (`src/app/[locale]/produits/[slug]/page.tsx`) — la disponibilité (`InStock`/`OutOfStock`) est calculée automatiquement à partir du stock réel. Validable avec le [Rich Results Test de Google](https://search.google.com/test/rich-results).
 
 ## Accessibilité
 
@@ -202,7 +218,7 @@ Suite à un audit Lighthouse (Performance : 97/100), les points signalés ont é
 
 Le site a été audité aux trois formats (mobile ~375 px, tablette ~768 px, desktop ~1440 px) sur toutes les pages (accueil, boutique avec filtres, fiche produit, panier, contact, à propos) : menu mobile, formulaires, galerie produit et grilles de cartes s'affichent correctement sans débordement horizontal à aucun de ces formats.
 
-- **Corrigé** : la grille "Pièces phares" de l'accueil et la grille de résultats de la boutique (`ProductsExplorer.tsx`) utilisaient un nombre de colonnes fixe (jusqu'à 4 sur desktop) indépendant du nombre réel de produits affichés. Résultat : dès qu'il y a moins de produits vedettes/filtrés que de colonnes (par exemple les 2 produits actuellement marqués `isFeatured`, ou une catégorie qui ne contient qu'1 ou 2 pièces), les cartes restaient plaquées à gauche avec un grand vide à droite sur les écrans larges. Les deux grilles adaptent maintenant leur nombre de colonnes au nombre de produits affichés (`featuredGridCols` dans `src/app/page.tsx`, `filteredGridCols` dans `src/components/ProductsExplorer.tsx`), pour rester équilibrées quel que soit le nombre de résultats.
+- **Corrigé** : la grille "Pièces phares" de l'accueil et la grille de résultats de la boutique (`ProductsExplorer.tsx`) utilisaient un nombre de colonnes fixe (jusqu'à 4 sur desktop) indépendant du nombre réel de produits affichés. Résultat : dès qu'il y a moins de produits vedettes/filtrés que de colonnes (par exemple les 2 produits actuellement marqués `isFeatured`, ou une catégorie qui ne contient qu'1 ou 2 pièces), les cartes restaient plaquées à gauche avec un grand vide à droite sur les écrans larges. Les deux grilles adaptent maintenant leur nombre de colonnes au nombre de produits affichés (`featuredGridCols` dans `src/app/[locale]/page.tsx`, `filteredGridCols` dans `src/components/ProductsExplorer.tsx`), pour rester équilibrées quel que soit le nombre de résultats.
 - **Vérifié, aucun problème trouvé** : en-tête et menu mobile (liens et zone de clic confortables), grilles produits à 2/3/4 colonnes selon le format, bascule fiche produit (galerie + infos empilées jusqu'à `lg`, côte à côte ensuite — comportement voulu), formulaires (contact, panier, newsletter) qui passent d'une colonne à deux selon la largeur, pied de page.
 
 ## Revue de code

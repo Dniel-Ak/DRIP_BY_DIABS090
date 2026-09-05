@@ -1,15 +1,17 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import AddToCartPanel from "@/components/AddToCartPanel";
 import ProductCard from "@/components/ProductCard";
 import ProductGallery from "@/components/ProductGallery";
+import { getPathname, Link } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import {
   formatPrice,
   getAllProducts,
-  getCategoryLabel,
   getProductBySlug,
+  getProductCopy,
   getProductsByCategory,
 } from "@/lib/products";
 import { buildMetadata } from "@/lib/seo";
@@ -18,7 +20,9 @@ import { getProductStock } from "@/lib/stock";
 import type { Product } from "@/types/product";
 
 export function generateStaticParams() {
-  return getAllProducts().map((product) => ({ slug: product.slug }));
+  return routing.locales.flatMap((locale) =>
+    getAllProducts().map((product) => ({ locale, slug: product.slug }))
+  );
 }
 
 // Le stock affiché sur cette page vient d'un fichier lu à chaque requête
@@ -28,21 +32,27 @@ export function generateStaticParams() {
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(
-  props: PageProps<"/produits/[slug]">
+  props: PageProps<"/[locale]/produits/[slug]">
 ): Promise<Metadata> {
-  const { slug } = await props.params;
+  const { locale, slug } = await props.params;
   const product = getProductBySlug(slug);
 
   if (!product) {
-    return { title: "Produit introuvable", robots: { index: false } };
+    const t = await getTranslations({ locale, namespace: "Metadata" });
+    return { title: t("productNotFound"), robots: { index: false } };
   }
 
+  const copy = getProductCopy(product, locale);
+
   return buildMetadata({
+    // Le nom du produit est un nom propre de marque : identique en fr et
+    // en en, seule la description est traduite.
     title: product.name,
-    description: product.shortDescription,
+    description: copy.shortDescription,
     path: `/produits/${product.slug}`,
+    locale,
     // Vraie photo du produit plutôt que le visuel de marque générique
-    // (src/app/opengraph-image.tsx) — bien plus parlant pour un partage
+    // (src/app/[locale]/opengraph-image.tsx) — bien plus parlant pour un partage
     // sur les réseaux sociaux.
     images:
       product.images.length > 0
@@ -56,17 +66,27 @@ export async function generateMetadata(
  * description, image(s), prix et disponibilité. Aide Google à afficher des
  * résultats enrichis (prix, stock) dans les résultats de recherche —
  * validable avec https://search.google.com/test/rich-results.
+ *
+ * Le contenu suit la langue de la page (description et libellé de
+ * catégorie traduits) : chaque version linguistique décrit donc le produit
+ * dans sa propre langue, ce qui est ce qu'attendent les moteurs.
  */
-function buildProductJsonLd(product: Product, stock: Record<string, number>) {
+function buildProductJsonLd(
+  product: Product,
+  stock: Record<string, number>,
+  description: string,
+  categoryLabel: string,
+  locale: string
+) {
   const totalStock = Object.values(stock).reduce((sum, n) => sum + n, 0);
 
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
-    description: product.shortDescription,
+    description,
     sku: product.slug,
-    category: getCategoryLabel(product.category),
+    category: categoryLabel,
     brand: { "@type": "Brand", name: "DIABS" },
   };
 
@@ -80,7 +100,7 @@ function buildProductJsonLd(product: Product, stock: Record<string, number>) {
   if (product.price !== null) {
     jsonLd.offers = {
       "@type": "Offer",
-      url: `${SITE_URL}/produits/${product.slug}`,
+      url: `${SITE_URL}${getPathname({ href: `/produits/${product.slug}`, locale })}`,
       priceCurrency: "XOF",
       price: product.price,
       availability:
@@ -95,21 +115,35 @@ function buildProductJsonLd(product: Product, stock: Record<string, number>) {
 }
 
 export default async function ProductPage(
-  props: PageProps<"/produits/[slug]">
+  props: PageProps<"/[locale]/produits/[slug]">
 ) {
-  const { slug } = await props.params;
+  const { locale, slug } = await props.params;
   const product = getProductBySlug(slug);
 
   if (!product) {
     notFound();
   }
 
+  const t = await getTranslations({ locale, namespace: "ProductDetail" });
+  const tProduct = await getTranslations({ locale, namespace: "Product" });
+  const tCategories = await getTranslations({ locale, namespace: "Categories" });
+  const tColors = await getTranslations({ locale, namespace: "Colors" });
+
+  const copy = getProductCopy(product, locale);
+  const categoryLabel = tCategories(product.category);
+
   const related = getProductsByCategory(product.category)
     .filter((item) => item.slug !== product.slug)
     .slice(0, 4);
 
   const stock = await getProductStock(product.slug);
-  const productJsonLd = buildProductJsonLd(product, stock);
+  const productJsonLd = buildProductJsonLd(
+    product,
+    stock,
+    copy.shortDescription,
+    categoryLabel,
+    locale
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -122,14 +156,16 @@ export default async function ProductPage(
 
       <nav className="mb-8 text-sm text-muted">
         <Link href="/produits" className="hover:text-accent">
-          Boutique
+          {t("breadcrumbShop")}
         </Link>
         <span className="mx-2">/</span>
+        {/* La valeur du paramètre reste la clé technique (`polos`), commune
+            aux deux langues — seul le libellé affiché est traduit. */}
         <Link
           href={`/produits?categorie=${product.category}`}
           className="hover:text-accent"
         >
-          {getCategoryLabel(product.category)}
+          {categoryLabel}
         </Link>
         <span className="mx-2">/</span>
         <span className="text-foreground/70">{product.name}</span>
@@ -144,22 +180,28 @@ export default async function ProductPage(
 
         <div>
           <span className="font-signature text-eyebrow uppercase text-muted">
-            {getCategoryLabel(product.category)}
+            {categoryLabel}
           </span>
           <h1 className="mt-2 font-display text-display-lg uppercase leading-none text-foreground">
             {product.name}
           </h1>
           {product.colors.length <= 1 && (
             <p className="mt-2 text-sm text-muted">
-              Coloris {product.colors.join(", ")}
+              {t("singleColor", {
+                color: product.colors
+                  .map((color) => (tColors.has(color) ? tColors(color) : color))
+                  .join(", "),
+              })}
             </p>
           )}
           <p className="mt-4 font-display text-display text-accent">
-            {formatPrice(product.price)}
+            {product.price === null
+              ? tProduct("priceToBeAnnounced")
+              : formatPrice(product.price, locale)}
           </p>
 
           <p className="mt-6 text-sm leading-relaxed text-muted sm:text-base">
-            {product.description}
+            {copy.description}
           </p>
 
           {product.details && product.details.length > 0 && (
@@ -186,7 +228,7 @@ export default async function ProductPage(
       {related.length > 0 && (
         <section className="mt-20 border-t border-border pt-12">
           <h2 className="mb-8 font-display text-display-lg uppercase text-foreground">
-            Vous aimerez aussi
+            {t("relatedTitle")}
           </h2>
           {/* `flex-wrap` avec une largeur fixe par carte plutôt qu'une
               grille à 4 colonnes fixes : le catalogue actuel n'a souvent

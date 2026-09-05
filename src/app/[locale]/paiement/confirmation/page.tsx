@@ -1,7 +1,8 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import ClearCartOnSuccess from "@/components/ClearCartOnSuccess";
+import { Link } from "@/i18n/navigation";
 import { formatPrice } from "@/lib/products";
 import {
   verifyPaystackTransaction,
@@ -9,13 +10,20 @@ import {
 } from "@/lib/paystack";
 import { commitReservation, releaseReservation } from "@/lib/stock";
 
-export const metadata: Metadata = {
-  title: "Confirmation de commande",
-  // Page transactionnelle propre à chaque commande (référence de
-  // paiement dans l'URL) : aucune valeur de référencement, à ne pas
-  // indexer.
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(
+  props: PageProps<"/[locale]/paiement/confirmation">
+): Promise<Metadata> {
+  const { locale } = await props.params;
+  const t = await getTranslations({ locale, namespace: "Metadata" });
+
+  return {
+    title: t("paymentTitle"),
+    // Page transactionnelle propre à chaque commande (référence de
+    // paiement dans l'URL) : aucune valeur de référencement, à ne pas
+    // indexer.
+    robots: { index: false, follow: false },
+  };
+}
 
 function Panel({
   eyebrow,
@@ -42,27 +50,38 @@ function Panel({
   );
 }
 
-const BOUTIQUE_LINK = (
-  <Link
-    href="/produits"
-    className="rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground"
-  >
-    Voir la boutique
-  </Link>
-);
+function BoutiqueLink({ label }: { label: string }) {
+  return (
+    <Link
+      href="/produits"
+      className="rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground"
+    >
+      {label}
+    </Link>
+  );
+}
 
-const PANIER_LINK = (
-  <Link
-    href="/panier"
-    className="rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground"
-  >
-    Retourner au panier
-  </Link>
-);
+function PanierLink({ label }: { label: string }) {
+  return (
+    <Link
+      href="/panier"
+      className="rounded-full bg-accent px-6 py-3 font-display uppercase tracking-wide text-accent-foreground"
+    >
+      {label}
+    </Link>
+  );
+}
 
 export default async function PaiementConfirmationPage(
-  props: PageProps<"/paiement/confirmation">
+  props: PageProps<"/[locale]/paiement/confirmation">
 ) {
+  const { locale } = await props.params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "Payment" });
+  const boutiqueLink = <BoutiqueLink label={t("ctaShop")} />;
+  const panierLink = <PanierLink label={t("ctaCart")} />;
+
   const searchParams = await props.searchParams;
   const referenceParam = Array.isArray(searchParams.reference)
     ? searchParams.reference[0]
@@ -71,11 +90,11 @@ export default async function PaiementConfirmationPage(
   if (!referenceParam) {
     return (
       <Panel
-        eyebrow="Commande"
-        title="Aucun paiement à confirmer"
-        cta={BOUTIQUE_LINK}
+        eyebrow={t("eyebrow")}
+        title={t("noPaymentTitle")}
+        cta={boutiqueLink}
       >
-        <p>Cette page confirme un paiement Paystack après redirection.</p>
+        <p>{t("noPaymentText")}</p>
       </Panel>
     );
   }
@@ -102,13 +121,12 @@ export default async function PaiementConfirmationPage(
     // effectivement pas eu lieu (voir src/lib/stock.ts).
     return (
       <Panel
-        eyebrow="Commande"
-        title="Impossible de vérifier ce paiement"
-        cta={PANIER_LINK}
+        eyebrow={t("eyebrow")}
+        title={t("verifyFailedTitle")}
+        cta={panierLink}
       >
         <p>
-          Une erreur est survenue pendant la vérification. Si le montant a
-          été prélevé, contacte-nous avec la référence{" "}
+          {t("verifyFailedText")}{" "}
           <span className="text-foreground">{referenceParam}</span>.
         </p>
       </Panel>
@@ -137,20 +155,20 @@ export default async function PaiementConfirmationPage(
       <>
         <ClearCartOnSuccess />
         <Panel
-          eyebrow="Commande confirmée"
-          title="Paiement réussi ✓"
-          cta={BOUTIQUE_LINK}
+          eyebrow={t("successEyebrow")}
+          title={t("successTitle")}
+          cta={boutiqueLink}
         >
           <p>
-            Merci, ta commande de {formatPrice(result.amount / 100)} est
-            confirmée.
+            {t("successText", {
+              amount: formatPrice(result.amount / 100, locale),
+            })}
           </p>
           <p className="mt-2 text-sm">
-            Référence : <span className="text-foreground">{result.reference}</span>
+            {t("reference")}{" "}
+            <span className="text-foreground">{result.reference}</span>
           </p>
-          <p className="mt-4 text-sm">
-            Nous te recontactons rapidement pour organiser la livraison.
-          </p>
+          <p className="mt-4 text-sm">{t("successFollowUp")}</p>
         </Panel>
       </>
     );
@@ -158,21 +176,16 @@ export default async function PaiementConfirmationPage(
 
   return (
     <Panel
-      eyebrow="Commande"
+      eyebrow={t("eyebrow")}
       title={
-        result.status === "abandoned" ? "Paiement abandonné" : "Paiement échoué"
+        result.status === "abandoned" ? t("abandonedTitle") : t("failedTitle")
       }
-      cta={PANIER_LINK}
+      cta={panierLink}
     >
       <p>
-        {result.status === "abandoned"
-          ? "Le paiement a été interrompu avant la fin."
-          : "Le paiement n'a pas pu être finalisé."}
+        {result.status === "abandoned" ? t("abandonedText") : t("failedText")}
       </p>
-      <p className="mt-2 text-sm">
-        Ton panier est toujours disponible — tu peux réessayer, ou passer
-        commande via WhatsApp/e-mail depuis le panier.
-      </p>
+      <p className="mt-2 text-sm">{t("retryText")}</p>
     </Panel>
   );
 }
