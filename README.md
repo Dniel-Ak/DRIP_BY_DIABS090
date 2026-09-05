@@ -1,5 +1,7 @@
 # DRIP BY DIABS
 
+[![CI](https://github.com/Dniel-Ak/DRIP_BY_DIABS090/actions/workflows/ci.yml/badge.svg)](https://github.com/Dniel-Ak/DRIP_BY_DIABS090/actions/workflows/ci.yml)
+
 Site vitrine et boutique en ligne (catalogue) de la marque de streetwear **DRIP BY DIABS**, construit avec Next.js (App Router), TypeScript et Tailwind CSS.
 
 ## Démarrer en local
