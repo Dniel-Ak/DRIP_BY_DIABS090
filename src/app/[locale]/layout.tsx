@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -149,6 +150,11 @@ export default async function LocaleLayout(props: LayoutProps<"/[locale]">) {
             <Footer />
           </CartProvider>
         </NextIntlClientProvider>
+        {/* Vercel Analytics : mesure les visites (pages vues, provenance,
+            pays...) sans cookies ni bandeau de consentement nécessaire.
+            N'apparaît dans le tableau de bord Vercel qu'une fois l'option
+            "Analytics" activée pour ce projet (voir le README). */}
+        <Analytics />
       </body>
     </html>
   );
