@@ -42,7 +42,14 @@ export default function HomePage() {
   return (
     <>
       {/* ---------- Hero : grand visuel + accroche ---------- */}
-      <section className="relative flex min-h-[85svh] items-end overflow-hidden sm:min-h-[90svh]">
+      <section className="relative flex min-h-[85svh] items-end sm:min-h-[90svh]">
+        {/* `overflow-hidden` n'est PAS mis ici : si le contenu (accroche +
+            texte + boutons) a besoin de plus de hauteur que le
+            min-h-[85svh]/90svh sur un écran large mais peu haut (fenêtre non
+            maximisée, zoom navigateur élevé...), la section doit s'agrandir
+            en conséquence plutôt que de couper le haut du texte, invisible
+            et silencieux. Le halo doré/DIABS ci-dessous gère déjà son propre
+            `overflow-hidden` interne pour rester bien cadré. */}
         <HeroVisual className="absolute inset-0" />
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 sm:pb-16 lg:pb-20">
