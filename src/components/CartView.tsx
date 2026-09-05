@@ -10,7 +10,7 @@ import type { Product } from "@/types/product";
 
 /** Numéro WhatsApp pour les commandes (Karam), format international sans
  * "+" ni espaces, prêt pour un lien wa.me. */
-const ORDER_WHATSAPP_NUMBER = "225797821052";
+const ORDER_WHATSAPP_NUMBER = "2250797821052";
 const ORDER_EMAIL = "contact.diabs090@gmail.com";
 
 type CartLineWithProduct = CartLine & { product: Product };
